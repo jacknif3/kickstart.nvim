@@ -201,7 +201,8 @@ vim.keymap.set('n', '<C-n>', '<cmd> NvimTreeToggle <CR>', { desc = 'Toggle nvimt
 vim.keymap.set('n', '<leader>e', '<cmd> NvimTreeFocus <CR>', { desc = 'Focus nvimtree' })
 vim.keymap.set('n', '<leader>x', '<cmd> BufferClose <CR>', { desc = 'Close buffer' })
 vim.keymap.set('n', '<leader>gg', '<cmd> LazyGit <CR>', { desc = '  LazyGit' })
-vim.keymap.set('n', '<leader>tt', '<cmd> Telescope themes <CR>', { desc = 'NVChad themes' })
+vim.keymap.set('n', '<leader>ttt', '<cmd> Telescope themes <CR>', { desc = 'NVChad themes' })
+vim.keymap.set('n', '<leader>h', '<cmd> GoDoc <CR>', { desc = 'Go Docs' })
 vim.keymap.set('v', '<leader>/', '<ESC><cmd>lua require("Comment.api").toggle.linewise(vim.fn.visualmode())<CR>', { desc = 'Comment in visual' })
 -- Normal mode mapping for toggling linewise comment
 vim.keymap.set('n', '<leader>/', function()
@@ -370,7 +371,39 @@ require('lazy').setup({
     end,
   },
   'nvchad/volt',
-
+  {
+    'fredrikaverpil/godoc.nvim',
+    version = '*',
+    dependencies = {
+      {
+        'nvim-treesitter/nvim-treesitter',
+        opts = {
+          ensure_installed = { 'go' },
+        },
+      },
+    },
+    cmd = { 'GoDoc' },
+    opts = {
+      picker = {
+        type = 'native', -- native, telescope or snacks
+      },
+    },
+  },
+  {
+    'mistweaverco/kulala.nvim',
+    keys = {
+      { '<leader>rs', desc = 'Send request' },
+      { '<leader>ra', desc = 'Send all requests' },
+      { '<leader>rb', desc = 'Open scratchpad' },
+    },
+    ft = { 'http', 'rest' },
+    opts = {
+      -- your configuration comes here
+      global_keymaps = true,
+      global_keymaps_prefix = '<leader>R',
+      kulala_keymaps_prefix = '',
+    },
+  },
   { -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
@@ -656,7 +689,7 @@ require('lazy').setup({
           --
           -- When you move your cursor, the highlights will be cleared (the second autocommand).
           local client = vim.lsp.get_client_by_id(event.data.client_id)
-          if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
+          if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
             local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
               buffer = event.buf,
@@ -683,7 +716,7 @@ require('lazy').setup({
           -- code, if the language server you are using supports them
           --
           -- This may be unwanted, since they displace some of your code
-          if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
+          if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
             map('<leader>th', function()
               vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
             end, '[T]oggle Inlay [H]ints')
@@ -700,7 +733,10 @@ require('lazy').setup({
       --   end
       --   vim.diagnostic.config { signs = { text = diagnostic_signs } }
       -- end
-
+      vim.diagnostic.config { virtual_text = true }
+      vim.diagnostic.config {
+        virtual_text = { current_line = true },
+      }
       -- LSP servers and clients are able to communicate to each other what features they support.
       --  By default, Neovim doesn't support everything that is in the LSP specification.
       --  When you add nvim-cmp, luasnip, etc. Neovim now has *more* capabilities.
@@ -732,7 +768,12 @@ require('lazy').setup({
             },
           },
         },
-        pyright = {},
+        jedi_language_server = {},
+        ruff = {
+          on_attach = function(client, bufnr)
+            client.server_capabilities.hoverProvider = false
+          end,
+        },
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -896,6 +937,12 @@ require('lazy').setup({
           ['<tab>'] = cmp.mapping.select_next_item(),
           -- Select the [p]revious item
           ['<C-p>'] = cmp.mapping.select_prev_item(),
+          ['<Up>'] = cmp.mapping(function(fallback)
+            fallback() -- Fall back to normal buffer movement
+          end, { 'i', 's' }),
+          ['<Down>'] = cmp.mapping(function(fallback)
+            fallback() -- Fall back to normal buffer movement
+          end, { 'i', 's' }),
 
           -- Scroll the documentation window [b]ack / [f]orward
           ['<C-b>'] = cmp.mapping.scroll_docs(-4),
